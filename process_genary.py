@@ -97,7 +97,13 @@ def read_file(path: Path) -> pd.DataFrame:
     with gzip.open(path, "rb") as file:
         data = json.loads(file.read().decode("utf-8-sig"))
     df = pd.DataFrame(data["aaData"])
-    df = df.iloc[:, :6]
+    # Link service: 6 cot (loai, ten, cong suat, san luong, ty le, ghi chu).
+    # Link www (genary.json cu, repo kiang): 7 cot, cot thu 2 de trong.
+    if df.shape[1] >= 7:
+        blank_second = (df.iloc[:, 1].astype(str).str.strip() == "").mean() > 0.5
+        df = df.iloc[:, [0, 2, 3, 4, 5, 6]] if blank_second else df.iloc[:, :6]
+    else:
+        df = df.iloc[:, :6]
     df.columns = ["type_raw", "unit", "capacity_mw", "net_mw", "ratio", "note"]
     # Dinh dang moi dung khoa "DateTime"; ban genary cu dung khoa rong "".
     stamp = data.get("DateTime") or data.get("") or time_from_path(path)
@@ -128,6 +134,12 @@ def process(raw_dir: Path, out_dir: Path) -> None:
     df["category"] = [split_oil(c, u) for c, u in zip(df["category"], df["unit"])]
     df["net_mw"] = pd.to_numeric(df["net_mw"], errors="coerce")
     df["capacity_mw"] = pd.to_numeric(df["capacity_mw"], errors="coerce")
+
+    # Kiem tra lech cot: san luong khong the bang dung cong suat o hau het dong.
+    has_cap = df["capacity_mw"] > 0
+    same = (df.loc[has_cap, "net_mw"] == df.loc[has_cap, "capacity_mw"]).mean()
+    if has_cap.any() and same > 0.5:
+        print(f"CANH BAO lech cot: {same:.0%} dong co san luong = cong suat. Kiem tra dinh dang file.")
 
     # Diem 2: phan sac pin la phu tai, giu dau am de phan biet.
     is_load = df["category"].isin(["storageLoad", "pumpLoad"])
