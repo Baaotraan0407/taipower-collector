@@ -10,7 +10,7 @@ import os
 import time
 import urllib.request
 
-URL = "https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/genary.json"
+URL = "https://service.taipower.com.tw/data/opendata/apply/file/d006001/001.json"
 TZ_TAIWAN = dt.timezone(dt.timedelta(hours=8))
 HEADERS = {
     "User-Agent": (
