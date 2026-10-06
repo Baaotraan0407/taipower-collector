@@ -87,13 +87,21 @@ def gas_subtype(category: str, unit: str) -> str:
     return "other"
 
 
+def time_from_path(path: Path) -> str:
+    """Suy thoi diem tu duong dan .../YYYY-MM-DD/HHMM.json.gz."""
+    hhmm = path.name.split(".")[0]
+    return f"{path.parent.name} {hhmm[:2]}:{hhmm[2:4]}"
+
+
 def read_file(path: Path) -> pd.DataFrame:
     with gzip.open(path, "rb") as file:
         data = json.loads(file.read().decode("utf-8-sig"))
     df = pd.DataFrame(data["aaData"])
     df = df.iloc[:, :6]
     df.columns = ["type_raw", "unit", "capacity_mw", "net_mw", "ratio", "note"]
-    df["datetime"] = pd.to_datetime(data["DateTime"])
+    # Dinh dang moi dung khoa "DateTime"; ban genary cu dung khoa rong "".
+    stamp = data.get("DateTime") or data.get("") or time_from_path(path)
+    df["datetime"] = pd.to_datetime(stamp)
     df["source_file"] = path.name
     return df
 
